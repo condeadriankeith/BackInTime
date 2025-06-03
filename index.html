@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Back in Time: A Heritage Tour of Negros Island</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --secondary: #10b981;
+            --accent: #f59e0b;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            scroll-behavior: smooth;
+        }
+        
+        .hero-image {
+            background-image: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5)), url('');
+            height: 90vh;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: cover;
+            position: relative;
+            background-attachment: fixed;
+        }
+        
+        .title-font {
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .map-container {
+            height: 500px;
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            z-index: 0; /* Ensure proper stacking context */
+            background-color: #f8fafc; /* Fallback color */
+        }
+        
+        .leaflet-container {
+            background-color: rgba(255,255,255,0) !important;
+        }
+        
+        .custom-popup .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+            box-shadow: 0 3px 14px rgba(0,0,0,0.15);
+            padding: 0 !important;
+        }
+        
+        .custom-popup .leaflet-popup-content {
+            margin: 0 !important;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -28px;
+            top: 0;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            border: 4px solid white;
+            box-shadow: 0 0 0 2px var(--primary);
+        }
+        
+        .tour-card {
+            transition: all 0.3s ease;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .tour-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .parallax {
+            background-attachment: fixed;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+        
+        .floating-btn {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        .testimonial-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(247,247,247,0.9) 100%);
+            backdrop-filter: blur(10px);
+        }
+        
+        .glow {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        }
+        
+        @media (max-width: 768px) {
+            .hero-image {
+                height: 70vh;
+                background-attachment: scroll;
+            }
+            
+            .timeline-item::before {
+                left: -15px;
+                width: 15px;
+                height: 15px;
+            }
+        }
+        
+        .day-button.active {
+            background-color: #2563eb;
+            color: white;
+        }
+        
+        /* Loading spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 0.5rem;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Map loading state */
+        .map-loading .map-container {
+            position: relative;
+        }
+        .map-loading .map-container::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 3rem;
+            height: 3rem;
+            border: 4px solid rgba(59, 130, 246, 0.2);
+            border-radius: 50%;
+            border-top-color: #3b82f6;
+            animation: spin 1s linear infinite;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+        
+        /* Add loading styles */
+        .image-loading {
+            background: linear-gradient(90deg, #f3f4f6, #e5e7eb, #f3f4f6);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""/>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white/90 backdrop-blur-md shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-20">
+                <div class="flex items-center">
+                    <a href="#" class="flex items-center">
+                        <i class="fas fa-landmark text-blue-500 text-2xl mr-2"></i>
+                        <span class="title-font text-xl font-bold text-gray-900">Back in Time</span>
+                    </a>
+                </div>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#about" class="text-gray-700 hover:text-blue-500 transition-colors duration-300 nav-link">About</a>
+                    <a href="#itinerary" class="text-gray-700 hover:text-blue-500 transition-colors duration-300 nav-link">Itinerary</a>
+                    <a href="#map" class="text-gray-700 hover:text-blue-500 transition-colors duration-300 nav-link">Map</a>
+                    <a href="#budget" class="text-gray-700 hover:text-blue-500 transition-colors duration-300 nav-link">Budget</a>
+                    <a href="#book" class="text-gray-700 hover:text-blue-500 transition-colors duration-300 nav-link">Book</a>
+                </div>
+                <div class="md:hidden flex items-center">
+                    <button class="mobile-menu-button p-2 rounded-md text-gray-700 hover:text-blue-500 focus:outline-none">
+                        <i class="fas fa-bars text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="hidden mobile-menu md:hidden bg-white shadow-xl">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="#about" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-500 hover:bg-gray-100">About</a>
+                <a href="#itinerary" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-500 hover:bg-gray-100">Itinerary</a>
+                <a href="#highlights" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-500 hover:bg-gray-100">Highlights</a>
+                <a href="#map" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-500 hover:bg-gray-100">Route</a>
+                <a href="#budget" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-500 hover:bg-gray-100">Budget</a>
+                <a href="#book" class="block px-3 py-2 rounded-md text-base font-medium text-white bg-blue-500 hover:bg-blue-600">Book Now</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="relative h-screen w-full overflow-hidden bg-black">
+        <div class="w-full h-full" style="background-image: url('https://images.pexels.com/photos/14139792/pexels-photo-14139792.jpeg'); background-size: cover; background-position: center;">
+            <!-- Photo will be loaded here -->
+        </div>
+        <div class="absolute inset-0 bg-black/40 flex items-center justify-center text-center px-4">
+            <div class="max-w-4xl mx-auto">
+                <h1 class="text-5xl md:text-7xl font-bold text-white mb-6 title-font drop-shadow-lg">Back in Time</h1>
+                <p class="text-xl md:text-3xl text-white/90 mb-8 font-medium drop-shadow-md">A Captivating Journey Through Negros Island's Rich Heritage</p>
+                <div class="flex flex-col sm:flex-row justify-center gap-4">
+                    <a href="#book" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-8 rounded-full text-lg transition duration-300 shadow-lg hover:shadow-xl">Book Your Journey</a>
+                    <a href="#itinerary" class="bg-white/20 hover:bg-white/30 text-white font-bold py-4 px-8 rounded-full text-lg transition duration-300 border-2 border-white shadow-lg hover:shadow-xl backdrop-blur-sm">Explore Itinerary</a>
+                </div>
+                <div class="mt-16 floating-btn">
+                    <a href="#about" class="text-white/90 hover:text-white animate-bounce">
+                        <i class="fas fa-chevron-down text-3xl"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Section -->
+    <section id="about" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <span class="text-blue-500 font-semibold">HERITAGE TOUR</span>
+                <h2 class="text-4xl font-bold text-gray-800 mb-4 title-font">Discover Negros Island's Glorious Past</h2>
+                <div class="w-24 h-1 bg-gradient-to-r from-blue-500 to-blue-300 mx-auto"></div>
+            </div>
+            
+            <div class="flex flex-col lg:flex-row items-center gap-12">
+                <div class="lg:w-1/2 mb-8 lg:mb-0 relative">
+                    <div class="rounded-xl overflow-hidden shadow-2xl aspect-video image-loading" data-photo-keyword="Negros Heritage">
+                        <!-- Photo will be loaded here -->
+                    </div>
+                    <div class="absolute -bottom-6 -right-6 bg-white p-4 rounded-lg shadow-lg hidden lg:block">
+                        <div class="flex items-center">
+                            <div class="bg-blue-100 p-3 rounded-full mr-3">
+                                <i class="fas fa-history text-blue-500 text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Established</p>
+                                <p class="font-bold text-gray-800">Since 1890s</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="lg:w-1/2">
+                    <h3 class="text-3xl font-semibold text-gray-800 mb-6 title-font">Step Into Living History</h3>
+                    <p class="text-gray-600 mb-6 leading-relaxed">Our "Back in Time" tour package is a meticulously crafted journey through Negros Island's remarkable historical and cultural legacy. Over four immersive days, you'll explore beautifully preserved ancestral homes, centuries-old churches, colonial landmarks, and heritage-rich towns that showcase the enduring influence of Spanish colonization and the golden age of the sugar industry.</p>
+                    <p class="text-gray-600 mb-8 leading-relaxed">From the "Paris of Negros" in Silay City to the romantic ruins of Talisay, and from Bacolod's vibrant culture to Dumaguete's educational heritage, this tour offers a unique window into the island's diverse historical experiences. You'll walk the same streets as sugar barons and revolutionaries, taste traditional delicacies, and connect with the living history that makes Negros Island truly special.</p>
+                    <div class="flex flex-wrap gap-3">
+                        <span class="bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-medium flex items-center">
+                            <i class="fas fa-calendar-day mr-2"></i> 4 Days / 3 Nights
+                        </span>
+                        <span class="bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-medium flex items-center">
+                            <i class="fas fa-map-marked-alt mr-2"></i> 7 Heritage Cities
+                        </span>
+                        <span class="bg-purple-100 text-purple-800 px-4 py-2 rounded-full text-sm font-medium flex items-center">
+                            <i class="fas fa-utensils mr-2"></i> Authentic Cuisine
+                        </span>
+                        <span class="bg-yellow-100 text-yellow-800 px-4 py-2 rounded-full text-sm font-medium flex items-center">
+                            <i class="fas fa-camera-retro mr-2"></i> Photo Opportunities
+                        </span>
+                    </div>
+                    
+                    <div class="mt-8 flex flex-col sm:flex-row gap-4">
+                        <a href="#itinerary" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full transition duration-300 text-center">
+                            View Full Itinerary
+                        </a>
+                        <a href="#highlights" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-3 px-6 rounded-full transition duration-300 text-center">
+                            See Tour Highlights
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Parallax Section -->
+    <div class="parallax py-32" style="background-image: url('')">
+        <div class="max-w-4xl mx-auto px-4 text-center bg-white/80 backdrop-blur-sm py-12 rounded-xl shadow-lg">
+            <h3 class="text-3xl font-bold text-gray-800 mb-6 title-font">Why Choose Our Heritage Tour?</h3>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div>
+                    <div class="bg-blue-500 text-white p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-user-tie text-2xl"></i>
+                    </div>
+                    <h4 class="font-bold text-gray-800 mb-2">Expert Local Guides</h4>
+                    <p class="text-gray-600 text-sm">Our passionate guides bring history to life with personal stories and deep knowledge.</p>
+                </div>
+                <div>
+                    <div class="bg-blue-500 text-white p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-route text-2xl"></i>
+                    </div>
+                    <h4 class="font-bold text-gray-800 mb-2">Optimized Itinerary</h4>
+                    <p class="text-gray-600 text-sm">Carefully planned route maximizes your experience while minimizing travel time.</p>
+                </div>
+                <div>
+                    <div class="bg-blue-500 text-white p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-heart text-2xl"></i>
+                    </div>
+                    <h4 class="font-bold text-gray-800 mb-2">Authentic Experiences</h4>
+                    <p class="text-gray-600 text-sm">We go beyond tourist spots to connect you with the real Negros heritage.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Highlights Section -->
+    <section id="highlights" class="py-20 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <span class="text-blue-500 font-semibold">UNFORGETTABLE EXPERIENCES</span>
+                <h2 class="text-4xl font-bold text-gray-800 mb-4 title-font">Tour Highlights</h2>
+                <div class="w-24 h-1 bg-gradient-to-r from-blue-500 to-blue-300 mx-auto"></div>
+                <p class="text-gray-600 mt-6 max-w-3xl mx-auto">Our carefully curated experiences showcase the best of Negros Island's heritage and culture.</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Ancestral Houses -->
+                <div class="bg-white p-8 rounded-xl shadow-md tour-card h-full">
+                    <div class="text-blue-500 text-5xl mb-6">
+                        <i class="fas fa-home"></i>
+                    </div>
+                    <h3 class="text-2xl font-semibold mb-4 title-font text-gray-800">Ancestral Houses</h3>
+                    <p class="text-gray-600 mb-6">Step inside the beautifully preserved Balay Negrense in Silay City. Marvel at its 19th-century architecture and learn about the sugar barons who shaped Negros’ history.</p>
+                    <div class="flex items-center text-blue-500 font-medium">
+                        <span>Featured Location</span>
+                        <i class="fas fa-arrow-right ml-2"></i>
+                    </div>
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs">Balay Negrense</span>
+                    </div>
+                </div>
+                <!-- Historic Churches -->
+                <div class="bg-white p-8 rounded-xl shadow-md tour-card h-full">
+                    <div class="text-blue-500 text-5xl mb-6">
+                        <i class="fas fa-church"></i>
+                    </div>
+                    <h3 class="text-2xl font-semibold mb-4 title-font text-gray-800">Historic Churches</h3>
+                    <p class="text-gray-600 mb-6">Visit centuries-old houses of worship including San Antonio de Padua Church in Sibulan and the Dumaguete Cathedral. Admire their unique blend of Spanish and local architectural styles.</p>
+                    <div class="flex items-center text-blue-500 font-medium">
+                        <span>Featured Churches</span>
+                        <i class="fas fa-arrow-right ml-2"></i>
+                    </div>
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs">San Antonio de Padua</span>
+                        <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs">Dumaguete Cathedral</span>
+                    </div>
+                </div>
+                <!-- Culinary Delights -->
+                <div class="bg-white p-8 rounded-xl shadow-md tour-card h-full">
+                    <div class="text-blue-500 text-5xl mb-6">
+                        <i class="fas fa-utensils"></i>
+                    </div>
+                    <h3 class="text-2xl font-semibold mb-4 title-font text-gray-800">Culinary Delights</h3>
+                    <p class="text-gray-600 mb-6">Savor the flavors of Negrense cuisine at Manokan Country in Bacolod, enjoy a local food crawl in Dumaguete, and feast on fresh seafood at Lab-as and San Carlos Market.</p>
+                    <div class="flex items-center text-blue-500 font-medium">
+                        <span>Must-Try Foods</span>
+                        <i class="fas fa-arrow-right ml-2"></i>
+                    </div>
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs">Chicken Inasal</span>
+                        <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs">Piaya</span>
+                        <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs">Seafood</span>
+                        <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs">Dumaguete Food Crawl</span>
+                    </div>
+                </div>
+                <!-- Iconic Landmarks -->
+                <div class="bg-white p-8 rounded-xl shadow-md tour-card h-full">
+                    <div class="text-blue-500 text-5xl mb-6">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                    <h3 class="text-2xl font-semibold mb-4 title-font text-gray-800">Iconic Landmarks</h3>
+                    <p class="text-gray-600 mb-6">Capture stunning photos at The Ruins in Talisay and along Dumaguete Boulevard. These sites offer perfect backdrops for your travel memories.</p>
+                    <div class="flex items-center text-blue-500 font-medium">
+                        <span>Featured Landmarks</span>
+                        <i class="fas fa-arrow-right ml-2"></i>
+                    </div>
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs">The Ruins</span>
+                        <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs">Dumaguete Boulevard</span>
+                    </div>
+                </div>
+                <!-- Educational Heritage -->
+                <div class="bg-white p-8 rounded-xl shadow-md tour-card h-full">
+                    <div class="text-blue-500 text-5xl mb-6">
+                        <i class="fas fa-university"></i>
+                    </div>
+                    <h3 class="text-2xl font-semibold mb-4 title-font text-gray-800">Educational Heritage</h3>
+                    <p class="text-gray-600 mb-6">Explore Silliman University in Dumaguete, one of Asia’s oldest American-founded universities, and its historic campus.</p>
+                    <div class="flex items-center text-blue-500 font-medium">
+                        <span>Featured Campus</span>
+                        <i class="fas fa-arrow-right ml-2"></i>
+                    </div>
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs">Silliman University</span>
+                    </div>
+                </div>
+                <!-- Revolutionary Legacy -->
+                <div class="bg-white p-8 rounded-xl shadow-md tour-card h-full">
+                    <div class="text-blue-500 text-5xl mb-6">
+                        <i class="fas fa-monument"></i>
+                    </div>
+                    <h3 class="text-2xl font-semibold mb-4 title-font text-gray-800">Revolutionary Legacy</h3>
+                    <p class="text-gray-600 mb-6">Experience the living history of Negros Island through its vibrant towns, heritage walks, and local stories that shaped the region.</p>
+                    <div class="flex items-center text-blue-500 font-medium">
+                        <span>Featured Experience</span>
+                        <i class="fas fa-arrow-right ml-2"></i>
+                    </div>
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs">San Carlos Heritage Walk</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Itinerary Section -->
+    <section id="itinerary" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <span class="text-blue-500 font-semibold">YOUR JOURNEY AWAITS</span>
+                <h2 class="text-4xl font-bold text-gray-800 mb-4 title-font">Tour Itinerary</h2>
+                <div class="w-24 h-1 bg-gradient-to-r from-blue-500 to-blue-300 mx-auto"></div>
+                <p class="text-gray-600 mt-6 max-w-3xl mx-auto">Our carefully crafted 4-day itinerary takes you through the most significant historical and cultural sites across Negros Island.</p>
+            </div>
+            
+            <div class="relative pt-12 pb-12">
+                <!-- Vertical line -->
+                <div class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-blue-200 transform -translate-x-1/2"></div>
+                
+                <!-- Timeline items -->
+                <div class="relative">
+                    <!-- Day 1 -->
+                    <div class="mb-16 flex justify-between items-center w-full">
+                        <div class="order-1 w-5/12">
+                            <div class="absolute left-1/2 w-8 h-8 rounded-full bg-blue-500 border-4 border-white shadow-md transform -translate-x-1/2"></div>
+                        </div>
+                        <div class="order-1 w-5/12 px-4 py-4 bg-white rounded-lg shadow-lg">
+                            <div class="flex items-center mb-4">
+                                <span class="bg-blue-500 text-white text-sm font-bold px-4 py-2 rounded-full">Day 1</span>
+                                <span class="ml-4 text-gray-700 font-medium uppercase tracking-wider">Silay & Talisay</span>
+                            </div>
+                            <h3 class="text-2xl font-semibold mb-4 title-font text-gray-800">Sugar Barons' Legacy</h3>
+                            <ul class="space-y-4">
+                                <li class="flex items-start mb-4 pb-4 border-b border-gray-100 last:border-0">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-plane text-blue-600 text-base"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Morning: Arrival at Bacolod-Silay Airport</h4>
+                                        <p class="text-gray-600 mt-1">Meet your guide and transfer to Silay City (15 min drive)</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start mb-4 pb-4 border-b border-gray-100 last:border-0">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-home text-blue-600 text-base"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Late Morning: Silay Heritage Tour</h4>
+                                        <p class="text-gray-600 mt-1">Visit Balay Negrense, Hofileña Ancestral House, and Bernardino Jalandoni Museum</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start mb-4 pb-4 border-b border-gray-100 last:border-0">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-utensils text-blue-600 text-base"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Lunch: El Ideal Bakery</h4>
+                                        <p class="text-gray-600 mt-1">Try authentic Silay delicacies (included)</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start mb-4 pb-4 border-b border-gray-100 last:border-0">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-camera text-blue-600 text-base"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Afternoon: The Ruins in Talisay</h4>
+                                        <p class="text-gray-600 mt-1">Explore this iconic mansion and enjoy golden hour photography</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start mb-4 pb-4 border-b border-gray-100 last:border-0">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-utensils text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Dinner: <strong>Manokan Country</strong> - Famous Bacolod chicken inasal (authentic heritage street food experience)</h4>
+                                        <p class="text-gray-600 mt-1">Enjoy authentic Negrense dishes at a heritage restaurant</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start mb-4 pb-4 border-b border-gray-100 last:border-0">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-bed text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Evening: Check-in at <strong>L'Fisher Hotel</strong> – Overnight stay in Bacolod’s premier heritage-inspired hotel</h4>
+                                        <p class="text-gray-600 mt-1">Rest and refresh</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Day 2 -->
+                    <div class="mb-16 flex justify-between items-center w-full flex-row-reverse">
+                        <div class="order-1 w-5/12">
+                            <div class="absolute left-1/2 w-8 h-8 rounded-full bg-blue-500 border-4 border-white shadow-md transform -translate-x-1/2"></div>
+                        </div>
+                        <div class="order-1 w-5/12 px-4 py-4 bg-white rounded-lg shadow-lg">
+                            <div class="flex items-center mb-4">
+                                <span class="bg-blue-500 text-white text-sm font-bold px-4 py-2 rounded-full">Day 2</span>
+                                <span class="ml-4 text-gray-700 font-medium uppercase tracking-wider">Bago & Dumaguete</span>
+                            </div>
+                            <h3 class="text-2xl font-semibold mb-4 title-font text-gray-800">Revolutionary Journey</h3>
+                            <ul class="space-y-4">
+                                <li class="flex items-start mb-4 pb-4 border-b border-gray-100 last:border-0">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-car text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Morning: Bago City Historical Tour</h4>
+                                        <p class="text-gray-600 mt-1">Visit General Juan Araneta Shrine and Bantayan Park</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start mb-4 pb-4 border-b border-gray-100 last:border-0">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-road text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Midday: Scenic Drive to Dumaguete</h4>
+                                        <p class="text-gray-600 mt-1">Travel via Kabankalan–Mabinay route (approx. 4 hours with stops)</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start mb-4 pb-4 border-b border-gray-100 last:border-0">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-utensils text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Lunch: Mabinay Spring Resort</h4>
+                                        <p class="text-gray-600 mt-1">Enjoy local cuisine by the springs (included)</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start mb-4 pb-4 border-b border-gray-100 last:border-0">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-utensils text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Dinner: <strong>Restaurante Balay Daku</strong> - Heritage mansion fine dining</h4>
+                                        <p class="text-gray-600 mt-1">Enjoy authentic Negrense dishes at a heritage restaurant</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start mb-4 pb-4 border-b border-gray-100 last:border-0">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-walking text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Evening: Dumaguete Boulevard</h4>
+                                        <p class="text-gray-600 mt-1">Leisure walk along the famous seaside promenade</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-bed text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Evening: Check-in at <strong>Florentina Homes</strong> – Overnight stay in Dumaguete’s charming boutique hotel</h4>
+                                        <p class="text-gray-600 mt-1">Rest and refresh</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Day 3 -->
+                    <div class="mb-16 flex justify-between items-center w-full">
+                        <div class="order-1 w-5/12">
+                            <div class="absolute left-1/2 w-8 h-8 rounded-full bg-blue-500 border-4 border-white shadow-md transform -translate-x-1/2"></div>
+                        </div>
+                        <div class="order-1 w-5/12 px-4 py-4 bg-white rounded-lg shadow-lg">
+                            <div class="flex items-center mb-4">
+                                <span class="bg-blue-500 text-white text-sm font-bold px-4 py-2 rounded-full">Day 3</span>
+                                <span class="ml-4 text-gray-700 font-medium uppercase tracking-wider">Dumaguete & Valencia</span>
+                            </div>
+                            <h3 class="text-2xl font-semibold mb-4 title-font text-gray-800">Cultural Exploration</h3>
+                            <ul class="space-y-4">
+                                <li class="flex items-start mb-4 pb-4 border-b border-gray-100 last:border-0">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-university text-blue-600 text-base"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Morning: Silliman University Tour</h4>
+                                        <p class="text-gray-600 mt-1">Visit Silliman Hall, Anthropological Museum, and Luce Auditorium</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start mb-4 pb-4 border-b border-gray-100 last:border-0">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-church text-blue-600 text-base"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Late Morning: Dumaguete Cathedral</h4>
+                                        <p class="text-gray-600 mt-1">Explore this historic church and bell tower</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start mb-4 pb-4 border-b border-gray-100 last:border-0">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-utensils text-blue-600 text-base"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Lunch: Valencia's Forest Camp</h4>
+                                        <p class="text-gray-600 mt-1">Dine amidst nature (included)</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start mb-4 pb-4 border-b border-gray-100 last:border-0">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-church text-blue-600 text-base"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Afternoon: San Antonio de Padua Church</h4>
+                                        <p class="text-gray-600 mt-1">Visit this historic church in Sibulan</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start mb-4 pb-4 border-b border-gray-100 last:border-0">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-utensils text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Dinner: <strong>Lab-as Seafood Restaurant</strong> - Exclusive dining in a museum home</h4>
+                                        <p class="text-gray-600 mt-1">Enjoy authentic Negrense dishes at a heritage restaurant</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start mb-4 pb-4 border-b border-gray-100 last:border-0">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-ice-cream text-blue-600 text-base"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Evening: Dumaguete Food Crawl</h4>
+                                        <p class="text-gray-600 mt-1">Sample local favorites at Sans Rival, Hayahay, and Painitan (own expense)</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-bed text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Evening: Check-in at <strong>The Flying Fish Hostel</strong> – Heritage-inspired backpacker lodging near Rizal Boulevard</h4>
+                                        <p class="text-gray-600 mt-1">Rest and refresh in communal heritage spaces</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Day 4 -->
+                    <div class="mb-16 flex justify-between items-center w-full flex-row-reverse">
+                        <div class="order-1 w-5/12">
+                            <div class="absolute left-1/2 w-8 h-8 rounded-full bg-blue-500 border-4 border-white shadow-md transform -translate-x-1/2"></div>
+                        </div>
+                        <div class="order-1 w-5/12 px-4 py-4 bg-white rounded-lg shadow-lg">
+                            <div class="flex items-center mb-4">
+                                <span class="bg-blue-500 text-white text-sm font-bold px-4 py-2 rounded-full">Day 4</span>
+                                <span class="ml-4 text-gray-700 font-medium uppercase tracking-wider">Return Journey</span>
+                            </div>
+                            <h3 class="text-2xl font-semibold mb-4 title-font text-gray-800">Crossing Back to Negros Occidental</h3>
+                            <div class="bg-blue-50 p-4 rounded-lg mb-4 border border-blue-100">
+                                <h4 class="font-bold text-blue-700 mb-2 flex items-center">
+                                    <i class="fas fa-project-diagram mr-2"></i>
+                                    Graph Theory in Practice
+                                </h4>
+                                <p class="text-sm text-gray-700">This day completes our Hamiltonian cycle - visiting each destination exactly once before returning to our starting point via San Carlos.</p>
+                            </div>
+                            <ul class="space-y-4">
+                                <li class="flex items-start mb-4 pb-4 border-b border-gray-100 last:border-0">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-ferry text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Morning: Sibulan to San Carlos Ferry</h4>
+                                        <p class="text-gray-600 mt-1">Scenic 1-hour ferry crossing (₱200) with views of Tañon Strait</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start mb-4 pb-4 border-b border-gray-100 last:border-0">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-utensils text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Lunch: San Carlos Seafood Market</h4>
+                                        <p class="text-gray-600 mt-1">Fresh local seafood lunch (included)</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start mb-4 pb-4 border-b border-gray-100 last:border-0">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-landmark text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Afternoon: San Carlos Heritage Walk</h4>
+                                        <p class="text-gray-600 mt-1">Visit Plaza and Spanish-era San Carlos Cathedral</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                        <i class="fas fa-car text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">Evening: Return to Silay</h4>
+                                        <p class="text-gray-600 mt-1">1.5-hour van transfer back to Bacolod-Silay Airport, completing the cycle</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Map Section -->
+    <section id="map" class="py-20 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <span class="text-blue-500 font-semibold">TOUR ROUTE</span>
+                <h2 class="text-4xl font-bold text-gray-800 mb-4 title-font">Interactive Tour Map</h2>
+                <div class="w-24 h-1 bg-gradient-to-r from-blue-500 to-blue-300 mx-auto"></div>
+                <p class="text-gray-600 mt-6 max-w-3xl mx-auto">Our carefully planned route takes you across Negros Island's most significant historical sites.</p>
+            </div>
+            
+            <div class="bg-white p-6 rounded-xl shadow-xl mb-12">
+                <h3 id="mapTitle" class="text-2xl font-semibold mb-4 title-font text-gray-800">Full Itinerary</h3>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <button onclick="showDay('all')" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">All Days</button>
+                    <button onclick="showDay('day1')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded transition">Day 1</button>
+                    <button onclick="showDay('day2')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded transition">Day 2</button>
+                    <button onclick="showDay('day3')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded transition">Day 3</button>
+                    <button onclick="showDay('day4')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded transition">Day 4</button>
+                </div>
+                <div id="tourMap" class="map-container"></div>
+                <div class="graph-theory-info">
+                    <h3 class="text-lg font-semibold mb-2 text-gray-800">Graph Theory Application</h3>
+                    <p class="text-gray-600">The tour route is designed as a Hamiltonian Cycle - visiting each vertex (destination) exactly once before returning to the start.</p>
+                    <p class="text-gray-600">This ensures:</p>
+                    <ul>
+                        <li>No repeated locations</li>
+                        <li>Optimal route efficiency</li>
+                        <li>Complete circuit through all destinations</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="bg-white p-8 rounded-xl shadow-md">
+                    <h3 class="text-2xl font-semibold mb-6 title-font text-gray-800">Route Optimization Details</h3>
+                    
+                    <ul class="space-y-6">
+                        <li class="flex items-start">
+                            <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                <i class="fas fa-route text-blue-600"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-800 mb-1">Geographic Logic</h4>
+                                <p class="text-gray-600">Routes follow clockwise progression around Negros Island to minimize backtracking. Overnight stays anchor each day's endpoint.</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start">
+                            <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                <i class="fas fa-clock text-blue-600"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-800 mb-1">Time Efficiency</h4>
+                                <p class="text-gray-600">Maximum 4h travel/day with strategic meal stops. Ferry crossing scheduled for calmest seas (10AM).</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start">
+                            <div class="bg-blue-100 p-2 rounded-full mr-4 flex-shrink-0">
+                                <i class="fas fa-landmark text-blue-600"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-800 mb-1">Heritage Focus</h4>
+                                <p class="text-gray-600">Prioritizes UNESCO sites in mornings, cultural meals at peak hours, and golden hour photography at key landmarks.</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="bg-white p-8 rounded-xl shadow-md">
+                    <h3 class="text-2xl font-semibold mb-6 title-font text-gray-800">Key Distances & Travel Times</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center border-b pb-3">
+                            <span class="text-gray-700 font-medium">Bacolod-Silay Airport to Bacolod City</span>
+                            <span class="font-medium">15km • 30min</span>
+                        </div>
+                        <div class="flex justify-between items-center border-b pb-3">
+                            <span class="text-gray-700 font-medium">Silay Heritage Tour Route</span>
+                            <span class="font-medium">8km • 45min</span>
+                        </div>
+                        <div class="flex justify-between items-center border-b pb-3">
+                            <span class="text-gray-700 font-medium">Bacolod to Dumaguete via Mabinay</span>
+                            <span class="font-medium">150km • 4h (with stops)</span>
+                        </div>
+                        <div class="flex justify-between items-center border-b pb-3">
+                            <span class="text-gray-700 font-medium">Dumaguete to Valencia Forest Camp</span>
+                            <span class="font-medium">12km • 30min</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700 font-medium">Sibulan to San Carlos Ferry</span>
+                            <span class="font-medium">15km • 1h (including boarding)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scope and Limitation Section -->
+    <section class="py-20 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <span class="text-blue-500 font-semibold">TOUR DESIGN</span>
+                <h2 class="text-4xl font-bold text-gray-800 mb-4 title-font">Scope and Limitations</h2>
+                <div class="w-24 h-1 bg-gradient-to-r from-blue-500 to-blue-300 mx-auto"></div>
+            </div>
+            
+            <div class="bg-white p-8 rounded-xl shadow-md max-w-4xl mx-auto">
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="text-xl font-semibold mb-3 text-gray-800">Tour Boundaries</h3>
+                        <p class="text-gray-700">This tour focuses exclusively on Negros Island, covering key heritage sites in both Negros Occidental and Negros Oriental provinces.</p>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-xl font-semibold mb-3 text-gray-800">Key Constraints</h3>
+                        <ul class="list-disc pl-6 space-y-2 text-gray-700">
+                            <li>4-day fixed itinerary with set departure/return points</li>
+                            <li>Dependent on ferry schedules for Sibulan-San Carlos crossing</li>
+                            <li>Limited to accessible heritage sites with road connections</li>
+                            <li>Budget-conscious design with mid-range accommodations</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <h3 class="text-lg font-semibold mb-2 text-gray-800">Not Included</h3>
+                        <p class="text-gray-700">Areas beyond Negros Island, extended stays at locations, or alternative transport modes outside the planned itinerary.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Budget Section -->
+    <section id="budget" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <span class="text-blue-500 font-semibold">TOUR COST</span>
+                <h2 class="text-4xl font-bold text-gray-800 mb-4 title-font">Tour Budget</h2>
+                <div class="w-24 h-1 bg-gradient-to-r from-blue-500 to-blue-300 mx-auto"></div>
+                <p class="text-gray-600 mt-6 max-w-3xl mx-auto">Our tour is designed to be affordable while providing a rich cultural experience.</p>
+            </div>
+            
+            <div class="grid lg:grid-cols-2 gap-12">
+                <div class="bg-gray-50 p-8 rounded-xl shadow-md border border-gray-200">
+                    <h3 class="text-2xl font-semibold mb-6 title-font text-gray-800">Estimated Costs</h3>
+                    
+                    <ul class="space-y-4">
+                        <li class="flex justify-between items-center bg-white p-4 rounded-lg">
+                            <div class="flex items-center">
+                                <div class="bg-blue-100 p-2 rounded-full mr-4">
+                                    <i class="fas fa-hotel text-blue-500"></i>
+                                </div>
+                                <span>Accommodation (3 nights: L’Fisher Hotel, Florentina Homes, Balay Negrense Guesthouse)</span>
+                            </div>
+                            <span class="font-bold text-lg">₱3,600</span>
+                        </li>
+                        <li class="flex justify-between items-center bg-white p-4 rounded-lg">
+                            <div class="flex items-center">
+                                <div class="bg-blue-100 p-2 rounded-full mr-4">
+                                    <i class="fas fa-utensils text-blue-500"></i>
+                                </div>
+                                <span>Meals (breakfast, lunch, dinner for 3 days)</span>
+                            </div>
+                            <span class="font-bold text-lg">₱1,500</span>
+                        </li>
+                        <li class="flex justify-between items-center bg-white p-4 rounded-lg">
+                            <div class="flex items-center">
+                                <div class="bg-blue-100 p-2 rounded-full mr-4">
+                                    <i class="fas fa-bus text-blue-500"></i>
+                                </div>
+                                <span>Transportation</span>
+                            </div>
+                            <span class="font-bold text-lg">₱2,600</span>
+                        </li>
+                        <li class="flex justify-between items-center bg-white p-4 rounded-lg">
+                            <div class="flex items-center">
+                                <div class="bg-blue-100 p-2 rounded-full mr-4">
+                                    <i class="fas fa-ticket-alt text-blue-500"></i>
+                                </div>
+                                <span>Entrance Fees</span>
+                            </div>
+                            <span class="font-bold text-lg">₱1,500</span>
+                        </li>
+                        <li class="flex justify-between items-center pt-6 mt-4 border-t-2 border-dashed border-gray-300">
+                            <span class="text-xl font-bold text-gray-800">Total Estimated Cost</span>
+                            <span class="text-2xl font-bold text-blue-600">₱9,200</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <div class="bg-gray-50 p-8 rounded-xl shadow-md border border-gray-200 mb-8">
+                        <h3 class="text-2xl font-semibold mb-6 title-font text-gray-800">Meal Cost Breakdown</h3>
+                        <ul class="space-y-3">
+                            <li class="flex justify-between items-center py-3 px-4 bg-white rounded-lg shadow-sm">
+                                <span class="text-gray-700">
+                                    <i class="fas fa-utensils text-blue-500 mr-2"></i>
+                                    Day 1: Manokan Country
+                                </span>
+                                <span class="font-medium text-blue-600">₱200</span>
+                            </li>
+                            <li class="flex justify-between items-center py-3 px-4 bg-white rounded-lg shadow-sm">
+                                <span class="text-gray-700">
+                                    <i class="fas fa-home text-blue-500 mr-2"></i>
+                                    Day 2: Balay Daku
+                                </span>
+                                <span class="font-medium text-blue-600">₱500</span>
+                            </li>
+                            <li class="flex justify-between items-center py-3 px-4 bg-white rounded-lg shadow-sm">
+                                <span class="text-gray-700">
+                                    <i class="fas fa-fish text-blue-500 mr-2"></i>
+                                    Day 3: Lab-as Seafood
+                                </span>
+                                <span class="font-medium text-blue-600">₱400</span>
+                            </li>
+                            <li class="flex justify-between items-center py-3 px-4 bg-white rounded-lg shadow-sm">
+                                <span class="text-gray-700">
+                                    <i class="fas fa-shopping-basket text-blue-500 mr-2"></i>
+                                    Day 4: San Carlos Market
+                                </span>
+                                <span class="font-medium text-blue-600">₱400</span>
+                            </li>
+                            <li class="flex justify-between items-center pt-4 mt-3 border-t border-gray-200 font-semibold">
+                                <span class="text-gray-800">Subtotal</span>
+                                <span class="text-lg text-blue-600">₱1,500</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-8 rounded-xl">
+                        <h3 class="text-2xl font-semibold mb-6 title-font text-gray-800">What's Included</h3>
+                        
+                        <ul class="space-y-4">
+                            <li class="flex items-start">
+                                <div class="bg-green-100 p-1 rounded-full mr-4 mt-1">
+                                    <i class="fas fa-check text-green-500 text-sm"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-800">All Meals</h4>
+                                    <p class="text-gray-600 text-sm">Breakfast, lunch, and dinner for 3 days</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <div class="bg-green-100 p-1 rounded-full mr-4 mt-1">
+                                    <i class="fas fa-check text-green-500 text-sm"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-800">Accommodation</h4>
+                                    <p class="text-gray-600 text-sm">3 nights in comfortable hotels (twin sharing)</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <div class="bg-green-100 p-1 rounded-full mr-4 mt-1">
+                                    <i class="fas fa-check text-green-500 text-sm"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-800">Transportation</h4>
+                                    <p class="text-gray-600 text-sm">All transfers between destinations</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <div class="bg-green-100 p-1 rounded-full mr-4 mt-1">
+                                    <i class="fas fa-check text-green-500 text-sm"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-800">Entrance Fees</h4>
+                                    <p class="text-gray-600 text-sm">All museum and heritage site fees</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <div class="bg-green-100 p-1 rounded-full mr-4 mt-1">
+                                    <i class="fas fa-check text-green-500 text-sm"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-800">Guided Tours</h4>
+                                    <p class="text-gray-600 text-sm">Local expert guides at each location</p>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-12 bg-blue-50 p-8 rounded-xl shadow-md border border-blue-100">
+                <h3 class="text-2xl font-semibold mb-4 title-font text-gray-800">Payment Options</h3>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-lg text-center">
+                        <div class="bg-blue-100 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-money-bill-wave text-blue-500 text-2xl"></i>
+                        </div>
+                        <h4 class="font-bold text-gray-800 mb-2">Bank Transfer</h4>
+                        <p class="text-gray-600 text-sm">Direct deposit to our BDO or BPI accounts</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg text-center">
+                        <div class="bg-blue-100 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-credit-card text-blue-500 text-2xl"></i>
+                        </div>
+                        <h4 class="font-bold text-gray-800 mb-2">Credit Card</h4>
+                        <p class="text-gray-600 text-sm">Secure online payment via PayMongo</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg text-center">
+                        <div class="bg-blue-100 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-hand-holding-usd text-blue-500 text-2xl"></i>
+                        </div>
+                        <h4 class="font-bold text-gray-800 mb-2">Installment Plan</h4>
+                        <p class="text-gray-600 text-sm">3-month payment plan available</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Target Audience Section -->
+    <section class="py-20 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <span class="text-blue-500 font-semibold">WHO IS THIS FOR?</span>
+                <h2 class="text-4xl font-bold text-gray-800 mb-4 title-font">Ideal Participants</h2>
+                <div class="w-24 h-1 bg-gradient-to-r from-blue-500 to-blue-300 mx-auto"></div>
+                <p class="text-gray-600 mt-6 max-w-3xl mx-auto">This tour is perfect for travelers who appreciate history, culture, and authentic experiences.</p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="bg-white p-8 rounded-xl shadow-md">
+                    <h3 class="text-2xl font-semibold mb-6 title-font text-gray-800">Who Will Enjoy This Tour</h3>
+                    <div class="space-y-6">
+                        <div class="flex items-start">
+                            <div class="bg-blue-100 p-3 rounded-full mr-4">
+                                <i class="fas fa-user-graduate text-blue-500 text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold">Students & Educators</h4>
+                                <p class="text-gray-600">Those interested in Philippine history and culture will find this tour particularly enriching. Perfect for history, anthropology, or tourism students.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="bg-blue-100 p-3 rounded-full mr-4">
+                                <i class="fas fa-camera text-blue-500 text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold">Cultural Travelers</h4>
+                                <p class="text-gray-600">Photographers and heritage enthusiasts will appreciate the wealth of photogenic locations and authentic cultural experiences.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="bg-blue-100 p-3 rounded-full mr-4">
+                                <i class="fas fa-users text-blue-500 text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold">Peer Groups</h4>
+                                <p class="text-gray-600">Friends, classmates, or club members traveling together will enjoy sharing these experiences and creating lasting memories.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="bg-blue-100 p-3 rounded-full mr-4">
+                                <i class="fas fa-globe-asia text-blue-500 text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold">Cultural Explorers</h4>
+                                <p class="text-gray-600">Travelers who prefer meaningful experiences over typical tourist activities will connect with this immersive journey.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-8 rounded-xl shadow-md">
+                    <h3 class="text-2xl font-semibold mb-6 title-font text-gray-800">Tour Requirements</h3>
+                    <div class="space-y-6">
+                        <div class="flex items-start">
+                            <div class="bg-blue-100 p-3 rounded-full mr-4">
+                                <i class="fas fa-user-check text-blue-500 text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold">Age 18-40 years old</h4>
+                                <p class="text-gray-600">Designed for young adults and adult travelers who can appreciate the historical context and enjoy moderate physical activity.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="bg-blue-100 p-3 rounded-full mr-4">
+                                <i class="fas fa-walking text-blue-500 text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold">Moderate Physical Activity</h4>
+                                <p class="text-gray-600">Participants should be comfortable with walking tours (2-3 km per day) and long van rides (up to 4 hours).</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="bg-blue-100 p-3 rounded-full mr-4">
+                                <i class="fas fa-book text-blue-500 text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold">Interest in History</h4>
+                                <p class="text-gray-600">Basic appreciation for Philippine history and culture will greatly enhance your experience.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="bg-blue-100 p-3 rounded-full mr-4">
+                                <i class="fas fa-heart text-blue-500 text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold">Open Mindset</h4>
+                                <p class="text-gray-600">Willingness to experience local culture, try new foods, and engage with the community.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-12 bg-gradient-to-r from-blue-500 to-blue-600 p-8 rounded-xl shadow-lg">
+                <div class="max-w-4xl mx-auto text-center text-white">
+                    <h3 class="text-2xl font-semibold mb-4 title-font">Not Sure If This Tour Is Right For You?</h3>
+                    <p class="mb-6 text-blue-100 max-w-3xl mx-auto">Contact us directly and we'll help you determine if this heritage tour matches your interests and expectations.</p>
+                    <a href="#contact" class="inline-block bg-white text-blue-600 font-bold py-3 px-8 rounded-full transition duration-300 hover:bg-gray-100 hover:shadow-lg">Ask Our Team</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <span class="text-blue-500 font-semibold">TRAVELER STORIES</span>
+                <h2 class="text-4xl font-bold text-gray-800 mb-4 title-font">What Our Travelers Say</h2>
+                <div class="w-24 h-1 bg-gradient-to-r from-blue-500 to-blue-300 mx-auto"></div>
+                <p class="text-gray-600 mt-6 max-w-3xl mx-auto">Hear from travelers who've experienced our Negros Island heritage tour.</p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="testimonial-card p-8 rounded-xl shadow-md border border-gray-100">
+                    <div class="mb-6">
+                        <h4 class="font-bold">Sarah M.</h4>
+                        <div class="flex text-yellow-400 mt-1">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 italic mb-6">"The heritage tour was absolutely breathtaking!"</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs">Ancestral Houses</span>
+                        <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs">Photography</span>
+                        <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs">Cultural Immersion</span>
+                    </div>
+                </div>
+                
+                <div class="testimonial-card p-8 rounded-xl shadow-md border border-gray-100">
+                    <div class="mb-6">
+                        <h4 class="font-bold">Mark T.</h4>
+                        <div class="flex text-yellow-400 mt-1">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star-half-alt"></i>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 italic mb-6">"As a history teacher, I appreciated how well-planned this tour was."</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs">History</span>
+                        <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs">Food</span>
+                        <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs">Educational</span>
+                    </div>
+                </div>
+                
+                <div class="testimonial-card p-8 rounded-xl shadow-md border border-gray-100">
+                    <div class="mb-6">
+                        <h4 class="font-bold">Jen L.</h4>
+                        <div class="flex text-yellow-400 mt-1">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 italic mb-6">"Traveling with like-minded people was a great experience."</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs">Group Travel</span>
+                        <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs">Cultural Immersion</span>
+                        <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs">Foodie</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Booking Section -->
+    <section id="book" class="py-20 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <span class="text-blue-500 font-semibold">RESERVE YOUR SPOT</span>
+                <h2 class="text-4xl font-bold text-gray-800 mb-4 title-font">Book Your Tour</h2>
+                <div class="w-24 h-1 bg-gradient-to-r from-blue-500 to-blue-300 mx-auto"></div>
+                <p class="text-gray-600 mt-6 max-w-3xl mx-auto">Secure your place on this unforgettable heritage journey through Negros Island</p>
+            </div>
+            
+            <div class="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-md">
+                <form class="space-y-6">
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="name" class="block text-gray-700 font-medium mb-2">Full Name</label>
+                            <input type="text" id="name" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        <div>
+                            <label for="email" class="block text-gray-700 font-medium mb-2">Email Address</label>
+                            <input type="email" id="email" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="date" class="block text-gray-700 font-medium mb-2">Preferred Tour Date</label>
+                            <input type="date" id="date" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        <div>
+                            <label for="participants" class="block text-gray-700 font-medium mb-2">Number of Participants</label>
+                            <select id="participants" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="1">1 person</option>
+                                <option value="2">2 people</option>
+                                <option value="3">3 people</option>
+                                <option value="4">4 people</option>
+                                <option value="5+">5+ people (group)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="message" class="block text-gray-700 font-medium mb-2">Special Requests</label>
+                        <textarea id="message" rows="4" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-6 rounded-lg transition duration-300 shadow-lg hover:shadow-xl">
+                        Submit Booking Request
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""></script>
+    
+    <!-- Custom JS -->
+    <script src="js/map.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeTourMap();
+        });
+    </script>
+</body>
+</html>
